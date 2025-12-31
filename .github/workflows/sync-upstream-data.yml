@@ -1,0 +1,47 @@
+name: Sync upstream data folders
+
+on:
+  schedule:
+    # 16:00 KST = 07:00 UTC (Korea has no DST)
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout origin repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream and fetch
+        run: |
+          git remote add upstream https://github.com/GENEXIS-AI/DailyNews.git || true
+          git fetch upstream main
+
+      - name: Update only data folders from upstream
+        run: |
+          git checkout upstream/main -- 논문 뉴스레터 프로덕트
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git add 논문 뉴스레터 프로덕트
+          git commit -m "chore: sync data from upstream ($(date -u +'%Y-%m-%d %H:%M:%S UTC'))"
+
+      - name: Push to origin
+        run: |
+          git push origin HEAD:main
+
