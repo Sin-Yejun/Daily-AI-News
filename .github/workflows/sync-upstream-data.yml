@@ -52,3 +52,7 @@ jobs:
         run: |
           git push origin HEAD:main
 
+      # Cloudflare Pages 재배포 트리거
+      - name: Trigger Cloudflare Pages Deployment
+        run: |
+          curl -X POST "https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/88b91010-7e32-4d84-8037-63fb3f6478d8"
