@@ -23,6 +23,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      # origin/main이 Actions 체크아웃보다 앞서 있을 때(non-fast-forward) 대비
+      - name: Sync with origin/main first
+        run: |
+          git fetch origin main
+          git checkout main
+          git rebase origin/main
+
       - name: Add upstream and fetch
         run: |
           git remote add upstream https://github.com/GENEXIS-AI/DailyNews.git || true
