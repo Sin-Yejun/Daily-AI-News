@@ -30,15 +30,15 @@ jobs:
 
       - name: Update only data folders from upstream
         run: |
-          git checkout upstream/main -- 논문 뉴스레터 프로덕트
+          git checkout upstream/main -- "논문" "뉴스레터" "프로덕트"
 
       - name: Commit if changed
         run: |
-          if git diff --quiet; then
+          if git diff --quiet HEAD -- "논문" "뉴스레터" "프로덕트"; then
             echo "No changes to commit."
             exit 0
           fi
-          git add 논문 뉴스레터 프로덕트
+          git add "논문" "뉴스레터" "프로덕트"
           git commit -m "chore: sync data from upstream ($(date -u +'%Y-%m-%d %H:%M:%S UTC'))"
 
       - name: Push to origin
