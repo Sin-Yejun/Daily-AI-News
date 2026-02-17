@@ -55,10 +55,27 @@ const isExcluded = (name) => {
   );
 };
 
+// Parse date from filename like "2024-08-22-17:54:25.md"
+const parseDateFromFilename = (filename) => {
+  const match = filename.replace(".md", "").match(/^(\d{4})-(\d{2})-(\d{2})-(\d{2}):(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  const [, year, month, day, hour, min, sec] = match;
+  return new Date(`${year}-${month}-${day}T${hour}:${min}:${sec}+09:00`);
+};
+
 // API to get list of categories (folders)
 app.get("/api/folders", (req, res) => {
   try {
-    const folders = getFolders();
+    const folders = getFolders().map((name) => {
+      const folderPath = path.join(__dirname, name);
+      const files = fs
+        .readdirSync(folderPath)
+        .filter((f) => f.endsWith(".md"))
+        .sort((a, b) => b.localeCompare(a));
+
+      const latestDate = files.length > 0 ? parseDateFromFilename(files[0]) : null;
+      return { name, latestDate };
+    });
     res.json(folders);
   } catch (err) {
     console.error(err);

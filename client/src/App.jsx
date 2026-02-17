@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { 
-  Folder, FileText, Search, Menu, ChevronRight, BookOpen, 
-  GraduationCap, Newspaper, Zap, LayoutGrid, ArrowRight 
+import {
+  Folder, FileText, Search, Menu, ChevronRight, BookOpen,
+  GraduationCap, Newspaper, Zap, LayoutGrid, ArrowRight, Clock
 } from 'lucide-react';
 import './index.css';
 
@@ -14,6 +14,7 @@ function App() {
   const [currentFile, setCurrentFile] = useState(null);
   const [content, setContent] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/folders')
@@ -25,6 +26,7 @@ function App() {
   const selectFolder = (folderName) => {
     setCurrentFolder(folderName);
     setSearchQuery('');
+    setSidebarOpen(false);
     // Clear content temporarily while loading new folder
     setContent('');
     setCurrentFile(null);
@@ -46,6 +48,7 @@ function App() {
     if (!folderName) return; 
     
     setCurrentFile(filename);
+    setSidebarOpen(false);
     fetch(`/api/content/${encodeURIComponent(folderName)}/${encodeURIComponent(filename)}`)
       .then(res => res.json())
       .then(data => {
@@ -74,6 +77,24 @@ function App() {
       }
     }
     return { full: stem, isDate: false };
+  };
+
+  const getRelativeTime = (dateStr) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffMin < 1) return '방금 전';
+    if (diffMin < 60) return `${diffMin}분 전 업데이트`;
+    if (diffHour < 24) return `${diffHour}시간 전 업데이트`;
+    if (diffDay < 7) return `${diffDay}일 전 업데이트`;
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${month}월 ${day}일 업데이트`;
   };
 
   const getFolderIcon = (name) => {
@@ -114,37 +135,48 @@ function App() {
   const Dashboard = () => (
     <div className="dashboard-container">
       <div className="dashboard-header">
+        <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)}>
+          <Menu size={22} />
+        </button>
         <h1>Welcome Back</h1>
         <p>오늘의 인사이트를 확인해 보세요.</p>
       </div>
       <div className="cards-grid">
-        {folders.map(folder => (
-          <button 
-            key={folder} 
-            className="folder-card"
-            onClick={() => selectFolder(folder)}
-            style={{ '--hover-color': getFolderColor(folder) }}
-          >
-            <div className="card-icon" style={{ color: getFolderColor(folder) }}>
-              {getFolderIcon(folder)}
-            </div>
-            <div className="card-info">
-              <h3>{folder}</h3>
-              <p>최신 {folder} 모아보기</p>
-            </div>
-            <div className="card-arrow">
-              <ArrowRight size={20} />
-            </div>
-          </button>
-        ))}
+        {folders.map(folder => {
+          const relTime = getRelativeTime(folder.latestDate);
+          return (
+            <button
+              key={folder.name}
+              className="folder-card"
+              onClick={() => selectFolder(folder.name)}
+              style={{ '--hover-color': getFolderColor(folder.name) }}
+            >
+              <div className="card-icon" style={{ color: getFolderColor(folder.name) }}>
+                {getFolderIcon(folder.name)}
+              </div>
+              <div className="card-info">
+                <h3>{folder.name}</h3>
+                {relTime ? (
+                  <p className="card-updated"><Clock size={13} />{relTime}</p>
+                ) : (
+                  <p>최신 {folder.name} 모아보기</p>
+                )}
+              </div>
+              <div className="card-arrow">
+                <ArrowRight size={20} />
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 
   return (
     <div className="app-container">
-      <nav className="sidebar">
-        <div className="logo-area" onClick={() => setCurrentFolder(null)} style={{cursor: 'pointer'}}>
+      {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
+      <nav className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="logo-area" onClick={() => { setCurrentFolder(null); setSidebarOpen(false); }} style={{cursor: 'pointer'}}>
           <BookOpen size={24} className="logo-icon" />
           <div className="logo-text">Daily<span>News</span></div>
         </div>
@@ -153,18 +185,18 @@ function App() {
            <h3 className="nav-title">Collections</h3>
            <ul className="folder-list">
              {folders.map(f => (
-               <li key={f}>
-                 <button 
-                   className={`nav-item ${currentFolder === f ? 'active' : ''}`}
-                   onClick={() => selectFolder(f)}
+               <li key={f.name}>
+                 <button
+                   className={`nav-item ${currentFolder === f.name ? 'active' : ''}`}
+                   onClick={() => selectFolder(f.name)}
                  >
-                   <div className="nav-icon-small" style={{ color: currentFolder === f ? getFolderColor(f) : '' }}>
-                      {f.includes('논문') ? <GraduationCap size={18}/> : 
-                       f.includes('뉴스레터') ? <Newspaper size={18}/> :
-                       f.includes('프로덕트') ? <Zap size={18}/> : <Folder size={18}/>}
+                   <div className="nav-icon-small" style={{ color: currentFolder === f.name ? getFolderColor(f.name) : '' }}>
+                      {f.name.includes('논문') ? <GraduationCap size={18}/> :
+                       f.name.includes('뉴스레터') ? <Newspaper size={18}/> :
+                       f.name.includes('프로덕트') ? <Zap size={18}/> : <Folder size={18}/>}
                    </div>
-                   <span>{f}</span>
-                   {currentFolder === f && <ChevronRight size={16} className="active-indicator" />}
+                   <span>{f.name}</span>
+                   {currentFolder === f.name && <ChevronRight size={16} className="active-indicator" />}
                  </button>
                </li>
              ))}
@@ -219,6 +251,9 @@ function App() {
         ) : (
           <>
             <header className="content-header">
+               <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)}>
+                 <Menu size={20} />
+               </button>
                <div className="header-breadcrumbs">
                  <span className="crumb-folder">{currentFolder}</span>
                  {currentFile && (
